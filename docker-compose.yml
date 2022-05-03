@@ -1,0 +1,118 @@
+version: '3'
+services:
+  postgres: ##### in shell: psql -U postgres -W postgres #####
+    image: 'postgres:latest'
+    hostname: postgres
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    volumes:
+      - pg_dataset:/var/lib/postgresql/data
+
+  rabbitmq: ##### in shell: rabbitmq-plugins enable rabbitmq_mqtt #####
+    image: rabbitmq:3-management-alpine 
+    hostname: rabbitmq      
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    ports:
+        - 1883:1883
+        - 5672:5672
+        - 15672:15672
+    volumes:
+      - rabbitmq-lib:/var/lib/rabbitmq/
+      - rabbitmq-etc:/etc/rabbitmq
+
+  nats:
+    image: nats
+    hostname: nats   
+    environment:
+      AUTHORIZATION_USER: nats
+      AUTHORIZATION_PASSWORD: nats
+    ports:
+      - 4222:4222
+    command: "-js"
+    volumes:
+      - "nats:/data"
+
+  redis:
+      image: "redis/redis-stack:latest"
+      ports:
+      - "6379:6379"        
+      - "8001:8001"
+      
+  timescaledb:
+    image: timescale/timescaledb:latest-pg14
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5434:5432"   
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.32
+    container_name: jaeger
+    restart: unless-stopped
+    ports:
+      - 6831:6831/udp 
+      - 6832:6832/udp 
+      - 5778:5778 
+      - 16686:16686 
+      - 14250:14250 
+      - 14268:14268 
+      - 14269:14269 
+      - 9411:9411 
+
+  mongodb:
+    image: docker.io/bitnami/mongodb:5.0.3
+    container_name: mongodb
+    restart: unless-stopped
+    hostname: mongodb
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: mongodb
+      MONGO_INITDB_ROOT_PASSWORD: mongodb
+      MONGODB_ROOT_USER: root
+      MONGODB_ROOT_PASSWORD: mongodb
+      MONGODB_USERNAME: mongodb
+      MONGODB_PASSWORD: mongodb
+      MONGODB_DATABASE: mongodb
+      # MONGODB_REPLICA_SET_MODE: "primary"
+      # MONGODB_ADVERTISED_HOSTNAME: "mongodb-primary"
+      # MONGODB_REPLICA_SET_KEY: "replicasetkey"
+    ports:
+      - 27017:27017
+    volumes:
+      - mongo_data:/bitnami/mongodb
+
+  minio:
+    image: minio/minio
+    restart: unless-stopped
+    container_name: minio
+    volumes:
+      - minio_dataset:/data
+    command: server --console-address ":9001" --address 0.0.0.0:9000 /data
+    ports:
+      - 9000:9000
+      - 9001:9001
+    environment:
+      MINIO_ROOT_USER: minio
+      MINIO_ROOT_PASSWORD: miniosecret
+      MINIO_ACCESS_KEY: minio
+      MINIO_SECRET_KEY: miniosecret
+
+volumes:
+  pg_dataset:
+    name: pg_dataset
+  rabbitmq-lib:
+    name: rabbitmq-lib
+  rabbitmq-etc:
+    name: rabbitmq-etc
+  nats:
+    name: nats
+  mongo_data:
+    name: mongo_data   
+  minio_dataset:
+    name: minio_dataset         
