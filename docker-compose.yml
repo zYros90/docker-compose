@@ -1,6 +1,7 @@
 version: '3'
 services:
-  postgres: ##### in shell: psql -U postgres -W postgres #####
+  postgres:
+    ##### in shell: psql -U postgres -W postgres #####
     image: 'postgres:latest'
     hostname: postgres
     ports:
@@ -12,23 +13,24 @@ services:
     volumes:
       - pg_dataset:/var/lib/postgresql/data
 
-  rabbitmq: ##### in shell: rabbitmq-plugins enable rabbitmq_mqtt #####
-    image: rabbitmq:3-management-alpine 
-    hostname: rabbitmq      
+  rabbitmq:
+    ##### in shell: rabbitmq-plugins enable rabbitmq_mqtt #####
+    image: rabbitmq:3-management-alpine
+    hostname: rabbitmq
     environment:
       RABBITMQ_DEFAULT_USER: guest
       RABBITMQ_DEFAULT_PASS: guest
     ports:
-        - 1883:1883
-        - 5672:5672
-        - 15672:15672
+      - 1883:1883
+      - 5672:5672
+      - 15672:15672
     volumes:
       - rabbitmq-lib:/var/lib/rabbitmq/
       - rabbitmq-etc:/etc/rabbitmq
 
   nats:
     image: nats
-    hostname: nats   
+    hostname: nats
     environment:
       AUTHORIZATION_USER: nats
       AUTHORIZATION_PASSWORD: nats
@@ -39,32 +41,32 @@ services:
       - "nats:/data"
 
   redis:
-      image: "redis/redis-stack:latest"
-      ports:
-      - "6379:6379"        
+    image: "redis/redis-stack:latest"
+    ports:
+      - "6379:6379"
       - "8001:8001"
-      
+
   timescaledb:
     image: timescale/timescaledb:latest-pg14
     restart: unless-stopped
     environment:
       POSTGRES_PASSWORD: postgres
     ports:
-      - "5434:5432"   
+      - "5434:5432"
 
   jaeger:
     image: jaegertracing/all-in-one:1.32
     container_name: jaeger
     restart: unless-stopped
     ports:
-      - 6831:6831/udp 
-      - 6832:6832/udp 
-      - 5778:5778 
-      - 16686:16686 
-      - 14250:14250 
-      - 14268:14268 
-      - 14269:14269 
-      - 9411:9411 
+      - 6831:6831/udp
+      - 6832:6832/udp
+      - 5778:5778
+      - 16686:16686
+      - 14250:14250
+      - 14268:14268
+      - 14269:14269
+      - 9411:9411
 
   mongodb:
     image: docker.io/bitnami/mongodb:5.0.3
@@ -103,6 +105,33 @@ services:
       MINIO_ACCESS_KEY: minio
       MINIO_SECRET_KEY: miniosecret
 
+  ## kafka
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.0.1
+    container_name: zookeeper
+    restart: unless-stopped
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+  kafka:
+    image: confluentinc/cp-kafka:7.0.1
+    container_name: kafka
+    restart: unless-stopped
+    ports:
+      # To learn about configuring Kafka for access across networks see
+      # https://www.confluent.io/blog/kafka-client-cannot-connect-to-broker-on-aws-on-docker-etc/
+      - "9092:9092"
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,PLAINTEXT_INTERNAL://kafka:29092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+
 volumes:
   pg_dataset:
     name: pg_dataset
@@ -113,6 +142,6 @@ volumes:
   nats:
     name: nats
   mongo_data:
-    name: mongo_data   
+    name: mongo_data
   minio_dataset:
-    name: minio_dataset         
+    name: minio_dataset
